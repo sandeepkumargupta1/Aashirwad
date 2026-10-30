@@ -1,0 +1,1 @@
+"""Aashirwad local agricultural API."""

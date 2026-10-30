@@ -1,0 +1,65 @@
+[
+  {
+    "id": "nasa",
+    "name": "NASA POWER",
+    "type": "Historical climate",
+    "status": "Available on request",
+    "detail": "Daily weather, previous five complete seasons; 24-hour cache. Historical data is never a forecast.",
+    "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/",
+    "resolution": "Regional climate grid"
+  },
+  {
+    "id": "olm",
+    "name": "OpenLandMap",
+    "type": "Mapped soil texture",
+    "status": "Import required",
+    "detail": "Authorized GeoTIFF or Earth Engine export; local Python connector samples your polygon or radius.",
+    "url": "https://developers.google.com/earth-engine/datasets/catalog/OpenLandMap_SOL_SOL_TEXTURE-CLASS_USDA-TT_M_v02",
+    "resolution": "250 m for cited v02 product"
+  },
+  {
+    "id": "soilgrids",
+    "name": "ISRIC SoilGrids",
+    "type": "Mapped soil properties",
+    "status": "Import required",
+    "detail": "Official WCS / WebDAV raster workflow. The paused REST API is not used. Depth and units must be supplied.",
+    "url": "https://docs.isric.org/globaldata/soilgrids/",
+    "resolution": "250 m; depth-specific"
+  },
+  {
+    "id": "isro",
+    "name": "ISRO EOS-04",
+    "type": "Surface soil moisture",
+    "status": "Import required",
+    "detail": "Official Bhoonidhi download requires registration. Import with date, units, scale and quality masking.",
+    "url": "https://www.isro.gov.in/High-Resolution_Operational_Soil_Moisture_Product.html",
+    "resolution": "500 m surface product"
+  },
+  {
+    "id": "cgwb",
+    "name": "CGWB / NWIC",
+    "type": "Groundwater stations",
+    "status": "Import required",
+    "detail": "Official station CSV imports and nearest-well distances. No borewell yield or exact farm water level is inferred.",
+    "url": "https://cgwb.gov.in/en/ground-water-level-monitoring",
+    "resolution": "Monitoring-station observations"
+  },
+  {
+    "id": "shc",
+    "name": "Soil Health Card",
+    "type": "Field soil test",
+    "status": "Farmer input",
+    "detail": "Enter lab results or import structured JSON and confirm. Automatic PDF/OCR extraction is not included.",
+    "url": "https://soilhealth.dac.gov.in/",
+    "resolution": "Field sample"
+  },
+  {
+    "id": "yield",
+    "name": "Government APY",
+    "type": "Crop production history",
+    "status": "Training data required",
+    "detail": "District crop area/production exports feed the Python training pipeline. Evaluated models are required before prediction.",
+    "url": "https://data.desagri.gov.in/website/crops-apy-report-web",
+    "resolution": "District / crop / year"
+  }
+]
