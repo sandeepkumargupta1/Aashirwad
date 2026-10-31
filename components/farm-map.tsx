@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "./locale";
 import { useEffect, useRef, useState } from "react";
 import type { Farm } from "../lib/types";
 import type { LocationFix } from "../lib/location";
@@ -12,6 +13,7 @@ export default function FarmMap({ farm, onPick, draw = false, compact = false, c
     overview?: boolean;
     showCoordinates?: boolean;
 }) {
+    const { t } = useLocale();
     const element = useRef<HTMLDivElement>(null), map = useRef<Leaflet.Map | null>(null), layers = useRef<Leaflet.LayerGroup | null>(null), LRef = useRef<typeof Leaflet | null>(null);
     const callback = useRef(onPick);
     callback.current = onPick;
@@ -30,7 +32,7 @@ export default function FarmMap({ farm, onPick, draw = false, compact = false, c
                 raster.addTo(m);
             };
             LRef.current = L;
-            const m = L.map(element.current, { zoomControl: !compact, scrollWheelZoom: false, attributionControl: true, minZoom: 3, maxZoom: 18, maxBounds: [[5, 67], [39, 99]], maxBoundsViscosity: 0.9 }).setView(overview ? [22.6, 79] : [farm.latitude, farm.longitude], overview ? 5 : compact ? 12 : 14);
+            const m = L.map(element.current, { zoomControl: false, scrollWheelZoom: false, attributionControl: true, minZoom: 3, maxZoom: 18, maxBounds: [[5, 67], [39, 99]], maxBoundsViscosity: 0.9 }).setView(overview ? [22.6, 79] : [farm.latitude, farm.longitude], overview ? 5 : compact ? 12 : 14);
             map.current = m;
             import("./map-layer").then(({ addBasemap }) => {
                 if (cancelled)
@@ -56,14 +58,20 @@ export default function FarmMap({ farm, onPick, draw = false, compact = false, c
         return () => { cancelled = true; map.current?.remove(); map.current = null; };
     }, []);
     useEffect(() => {
+        if (!ready || compact || !map.current || !LRef.current) return;
+        const zoom = LRef.current.control.zoom({ zoomInTitle: t("Zoom in"), zoomOutTitle: t("Zoom out") }).addTo(map.current);
+        return () => { zoom.remove(); };
+    }, [ready, compact, t]);
+    useEffect(() => {
         const L = LRef.current, m = map.current, g = layers.current;
         if (!ready || !L || !m || !g)
             return;
         g.clearLayers();
         m.setView(overview ? [22.6, 79] : [farm.latitude, farm.longitude], overview ? 5 : Math.max(13, m.getZoom()), { animate: false });
         if (currentPosition) {
-            if (currentPosition.accuracy > 0) L.circle([currentPosition.latitude, currentPosition.longitude], { radius: currentPosition.accuracy, color: "#5c91be", weight: 1, fillColor: "#6da3ce", fillOpacity: .12 }).addTo(g);
-            L.circleMarker([currentPosition.latitude, currentPosition.longitude], { radius: 7, color: "white", weight: 3, fillColor: "#398ac5", fillOpacity: 1 }).bindTooltip("Your current location").addTo(g);
+            if (currentPosition.accuracy > 0)
+                L.circle([currentPosition.latitude, currentPosition.longitude], { radius: currentPosition.accuracy, color: "#5c91be", weight: 1, fillColor: "#6da3ce", fillOpacity: .12 }).addTo(g);
+            L.circleMarker([currentPosition.latitude, currentPosition.longitude], { radius: 7, color: "white", weight: 3, fillColor: "#398ac5", fillOpacity: 1 }).bindTooltip(t("Your current location")).addTo(g);
         }
         if (overview)
             return;
@@ -74,8 +82,8 @@ export default function FarmMap({ farm, onPick, draw = false, compact = false, c
         if (draw && farm.boundary.length)
             L.polyline(farm.boundary, { color: "#234f3c", weight: 3 }).addTo(g);
         const icon = L.divIcon({ className: "farm-marker", html: '<span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21V10M12 14C4 15 2 8 4 5c7 0 9 4 8 9Zm0-4C11 3 17 2 21 3c1 6-3 9-9 7Z"/></svg></span>', iconSize: [42, 48], iconAnchor: [21, 45] });
-        L.marker([farm.latitude, farm.longitude], { icon, title: "Selected farm location", alt: "Farm location pin" }).addTo(g);
+        L.marker([farm.latitude, farm.longitude], { icon, title: t("Selected farm location"), alt: t("Farm location pin") }).addTo(g);
         farm.boundary.forEach(p => L.circleMarker(p, { radius: 4, color: "#fff", fillColor: "#234f3c", fillOpacity: 1, weight: 2 }).addTo(g));
-    }, [ready, farm.latitude, farm.longitude, farm.radiusKm, farm.boundary, draw, currentPosition, overview]);
-    return <div className={`map-shell ${compact ? "compact" : ""} ${draw ? "drawing" : ""}`}><div ref={element} className="leaflet-map" aria-label="Farm location map"/>{showCoordinates && <div className="map-coordinate">{farm.latitude.toFixed(4)}° N &nbsp; {farm.longitude.toFixed(4)}° E</div>}{tileError && <div className="map-offline">Map tiles unavailable · pin and boundary controls still work</div>}{draw && <div className="drawing-note">Click to add boundary points · {farm.boundary.length} points</div>}</div>;
+    }, [ready, farm.latitude, farm.longitude, farm.radiusKm, farm.boundary, draw, currentPosition, overview, t]);
+    return <div className={`map-shell ${compact ? "compact" : ""} ${draw ? "drawing" : ""}`}><div ref={element} className="leaflet-map" aria-label={t("Farm location map")}/>{showCoordinates && <div className="map-coordinate">{t(farm.latitude.toFixed(4))}{t("° N") + " · "}{t(farm.longitude.toFixed(4))}{t("\u00B0 E")}</div>}{tileError && <div className="map-offline">{t("Map tiles unavailable \u00B7 pin and boundary controls still work")}</div>}{draw && <div className="drawing-note">{t("Click to add boundary points \u00B7 ")}{farm.boundary.length}{t(" points")}</div>}</div>;
 }

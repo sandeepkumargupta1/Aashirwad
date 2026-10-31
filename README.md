@@ -41,7 +41,7 @@ The Python service includes reusable OpenLandMap, SoilGrids, EOS-04 and CGWB con
 - Large labeled crop/water/soil actions, a simpler four-item menu and a clearer sprout logo. Coordinates, boundaries and extra form fields are optional advanced controls.
 - Saved map-selected fields stay selected when a later GPS fix arrives. Field-specific soil tests are not reused at a different location.
 - Overview, soil, climate, water, crops, advisory, comparison and data-source screens.
-- English/Hindi navigation and primary interface labels. Agronomic details and technical source notes are currently in English.
+- English/Hindi throughout screens, forms, charts, crop explanations, source notes and messages. Scientific units, publisher names and farmer-entered names retain their original form. Language preference persists between visits.
 - Explicit demo/live separation; loading, failure and partial-data states.
 - Soil Health Card manual entry, structured JSON import, confirmation and laboratory priority. No PDF/OCR extraction is claimed.
 - Nine configurable crop profiles, visible factor weights, missing-evidence checks and water scenarios.

@@ -1,12 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { runInNewContext } from "node:vm";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createServer } from "vite";
 import vinext from "vinext";
 import { workerSafeDevRuntime } from "../scripts/vite/worker-safe-runtime.mjs";
 
 test("Vite runtime guards survive the development transform and work without window", async () => {
+  const cacheDir = await mkdtemp(join(tmpdir(), "aashirwad-worker-test-"));
   const server = await createServer({
+    cacheDir,
     configFile: false,
     plugins: [vinext(), workerSafeDevRuntime()],
     server: { middlewareMode: true },
@@ -25,6 +30,7 @@ test("Vite runtime guards survive the development transform and work without win
     assert.equal(event, "beforeunload", "Browser unload handling remains active");
   } finally {
     await server.close();
+    await rm(cacheDir, { recursive: true, force: true });
   }
 });
 
