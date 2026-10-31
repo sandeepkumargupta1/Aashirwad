@@ -5,6 +5,8 @@ import type { Map } from 'leaflet';
 setWorkerUrl(workerUrl);
 export function addBasemap(map: Map) {
     const layer = maplibreGL({ style: 'https://tiles.openfreemap.org/styles/liberty', interactive: false, attributionControl: false });
+    // Leaflet owns attribution so that switching layers removes the old credits.
+    layer.options.attribution = '<a href="https://openfreemap.org/">OpenFreeMap</a> · <a href="https://openmaptiles.org/">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
     try {
         layer.addTo(map);
     }
@@ -18,6 +20,5 @@ export function addBasemap(map: Map) {
             map.removeLayer(layer);
         throw error;
     }
-    map.attributionControl.addAttribution('<a href="https://openfreemap.org/">OpenFreeMap</a> · <a href="https://openmaptiles.org/">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>');
     return layer;
 }

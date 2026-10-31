@@ -1,7 +1,0 @@
-export default function CropArt({ id, large = false }: {
-    id: string;
-    large?: boolean;
-}) {
-    const legume = ["chickpea", "soybean", "groundnut"].includes(id), grain = ["wheat", "millet", "rice"].includes(id);
-    return <svg className={`crop-art art-${id} ${large ? "large" : ""}`} viewBox="0 0 100 100" fill="none" aria-hidden="true"><ellipse cx="50" cy="86" rx="29" ry="5" fill="currentColor" opacity=".09"/><path d="M50 85C49 66 52 45 56 17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>{grain ? <><path d="M55 52C44 52 38 43 40 38c9 1 14 6 15 14ZM57 41c-11-1-15-10-13-15 8 1 13 8 13 15ZM58 30c-4-9-1-17 3-21 4 7 3 14-3 21ZM55 51c11-2 18-10 17-16-9 1-16 8-17 16ZM57 40c10-3 16-11 14-16-9 2-14 9-14 16Z" fill="currentColor" opacity=".7"/><path d="M49 76C35 70 29 60 32 52c13 5 17 15 17 24Z" fill="currentColor" opacity=".35"/></> : legume ? <><path d="M50 66C32 68 22 57 24 47c18-2 27 8 26 19ZM52 47c-15-2-21-14-17-22 14 1 21 11 17 22ZM54 56c17 1 27-10 24-21-17 0-27 9-24 21ZM57 31c14 0 21-10 18-19-15 1-21 9-18 19Z" fill="currentColor" opacity=".65"/><path d="M50 59c-14-2-20 5-16 16 11 4 17-1 16-16Z" fill="#c6ae68"/><path d="M50 69c12-7 22-3 22 8-8 9-18 5-22-8Z" fill="#e1cd91"/></> : <><path d="M50 65C31 66 20 55 24 45c14-3 27 6 26 20ZM53 48c19 0 30-11 26-22-18-1-28 8-26 22Z" fill="currentColor" opacity=".6"/><circle cx="57" cy="19" r="12" fill={id === "cotton" ? "#f4f1e5" : "#e2c075"}/><circle cx="48" cy="27" r="11" fill={id === "cotton" ? "#e9e7dc" : "#d3b063"}/></>}</svg>;
-}

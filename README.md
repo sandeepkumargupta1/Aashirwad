@@ -14,7 +14,7 @@ pnpm dev
 
 Open the address printed by the dev server. Start in **Demo** to explore clearly labeled synthetic records. Choose **Live data** to request NASA POWER's previous five complete seasonal records and use your confirmed soil-test entries. If an external request fails, the app keeps missing values empty and withholds unsupported scores.
 
-The frontend is React + TypeScript with Tailwind, custom CSS, Recharts and Leaflet. OpenFreeMap vector basemaps use MapLibre; an FOSSGIS OSM raster fallback supports browsers without WebGL2. Map serving depends on provider availability and usage terms. No paid API subscription is built in.
+The frontend is React + TypeScript with Tailwind, custom CSS, Recharts and Leaflet. The map offers Streets (OpenFreeMap/MapLibre, with an FOSSGIS OSM raster fallback), Satellite (Esri World Imagery) and Terrain (OpenTopoMap). Layers preserve the selected field and drawn boundary. Imagery is a reference basemap, not a live feed or a source of farm measurements. Map serving depends on provider availability and usage terms. No paid API subscription is built in.
 
 ## Run the Python data service
 
@@ -44,7 +44,7 @@ The Python service includes reusable OpenLandMap, SoilGrids, EOS-04 and CGWB con
 - English/Hindi throughout screens, forms, charts, crop explanations, source notes and messages. Scientific units, publisher names and farmer-entered names retain their original form. Language preference persists between visits.
 - Explicit demo/live separation; loading, failure and partial-data states.
 - Soil Health Card manual entry, structured JSON import, confirmation and laboratory priority. No PDF/OCR extraction is claimed.
-- Nine configurable crop profiles, visible factor weights, missing-evidence checks and water scenarios.
+- Nine configurable crop profiles, real reference plant photos, visible factor weights, missing-evidence checks and water scenarios. Photo credits and licenses are available under Data & sources and in `docs/PHOTO_CREDITS.md`.
 - Historical NASA POWER request, missing-value handling, cross-year Rabi grouping and 24-hour caching.
 - An indicative weekly ETc calculator using user-entered ETo and effective rain, with FAO stage coefficients where configured.
 - Official local raster imports, polygon/radius aggregation, nearest groundwater station observations and source metadata.
