@@ -10,7 +10,7 @@ import messages from "../data/translations-hi.json";
 import photos from "../data/crop-photos.json";
 
 test("weather, map and crop-photo labels switch in both directions", () => {
-    for (const text of ["Seasonal rainfall", "Mean temperature", "Relative humidity", "Dry spells / season", "Rainfall across seasons", "Seasonal temperature trends", "Mean daily maximum", "Mean daily minimum", "Jan", "Dec", "Streets", "Satellite", "Terrain", "Map layers", ...Object.values(photos).map(photo => photo.alt)]) {
+    for (const text of ["Seasonal rainfall", "Mean temperature", "Relative humidity", "Dry spells / season", "Rainfall across seasons", "Seasonal temperature trends", "Mean daily maximum", "Mean daily minimum", "Jan", "Dec", "Streets", "Satellite", "Terrain", "Map layers", "Home", "My field", "My soil", "Past weather", "Water", "Choose crops", "Farming tips", ...Object.values(photos).map(photo => photo.alt)]) {
         assert.match(translate(text, true), /[\u0900-\u097f]/, text);
         assert.equal(translate(text, false), text);
     }
@@ -68,7 +68,7 @@ test("static interface text has translations and localized options keep explicit
             checkText(node.right, file);
         }
     }
-    for (const file of ["components/dashboard.tsx", "components/charts.tsx", "components/location-panel.tsx", "components/farm-map.tsx", "components/crop-photo.tsx"]) {
+    for (const file of ["components/dashboard.tsx", "components/charts.tsx", "components/location-panel.tsx", "components/farm-map.tsx", "components/crop-photo.tsx", "components/voice-assistant.tsx", "components/app-entry.tsx", "components/growth-scene.tsx"]) {
         const root = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
         function visit(node: ts.Node) {
             if (ts.isCallExpression(node) && node.expression.getText(root) === "t" && node.arguments.length === 1) checkText(node.arguments[0], file);

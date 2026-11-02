@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUpRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, LocateFixed, Leaf, Layers, LayoutDashboard, CloudSun, Droplets, Sprout, Tractor, SlidersHorizontal, ArrowLeftRight, Database, Download, RefreshCw, Check, CheckCircle2, Info, AlertTriangle, X, Plus, Upload, Menu, Globe2, Sun, FlaskConical, Waves, BookOpen, Clock, Wind, Thermometer, ScanLine, PenTool, Trash2, Save, ExternalLink, ShieldCheck, Mountain, Loader2, Search, Navigation, Map as MapIcon, Settings2 } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ArrowLeft, ChevronRight, ChevronDown, MapPin, LocateFixed, Leaf, Layers, LayoutDashboard, CloudSun, Droplets, Sprout, Tractor, SlidersHorizontal, ArrowLeftRight, Database, Download, RefreshCw, Check, CheckCircle2, Info, AlertTriangle, X, Plus, Upload, Menu, Globe2, Sun, FlaskConical, Waves, BookOpen, Clock, Wind, Thermometer, ScanLine, PenTool, Trash2, Save, ExternalLink, ShieldCheck, Mountain, Loader2, Search, Navigation, Map as MapIcon, Settings2, LogOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Analysis, Farm, Mode, Page, RankedCrop, SoilTest } from "../lib/types";
 import { analyze, soilFor } from "../lib/analysis";
@@ -17,6 +17,10 @@ import cropPhotos from "../data/crop-photos.json";
 import { RainChart, TemperatureChart } from "./charts";
 import { LocaleProvider, useLocale } from "./locale";
 import { translate, validationMessage, errorMessage } from "../lib/i18n";
+import VoiceAssistant from "./voice-assistant";
+import { buildAssistantContext, farmPatch, type AssistantAction } from "../lib/assistant-contract";
+import { setMapPreference } from "../lib/map-preference";
+import { ENTRY_KEY, farmStorageKey } from "../lib/account";
 const fmt = (n: number | null | undefined, d = 0) => n === null || n === undefined ? "—" : n.toLocaleString("en-IN", { maximumFractionDigits: d });
 const nav: {
     id: Page;
@@ -71,27 +75,29 @@ function CropCard({ crop, index, onClick, hindi = false }: {
     hindi?: boolean;
 }) { const { t } = useLocale(); return <button className="crop-card card" onClick={onClick}><div className={`crop-visual crop-bg-${crop.id}`}><span className="crop-number">0{index + 1}</span><CropPhoto id={crop.id}/><span className={`water-tag water-${crop.water.toLowerCase()}`}><Droplets size={12}/>{t(crop.water)}{t(" water")}</span></div><div className="crop-card-body"><div><span className="crop-family">{t(crop.family)}</span><h3>{t(hindi ? crop.hindi : crop.name)}</h3></div><Score score={crop.score} small/><p>{t(crop.eligible ? `${crop.days.join("–")} days · ${crop.seasons.join(" / ")}` : "Outside selected season")}</p><div className="crop-card-footer"><span>{t(crop.score === null ? "More data needed" : crop.eligible ? "View suitability factors" : "View seasonal limits")}</span><ArrowUpRight size={15}/></div></div></button>; }
 function downloadJSON(data: unknown, name: string) { const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
-export default function Dashboard() {
+export default function Dashboard({ demoAccount = false, accountName = "My account", accountKey, signOutPath = "/login" }: { demoAccount?: boolean; accountName?: string; accountKey?: string; signOutPath?: string }) {
+    const storageKey = (key: string) => farmStorageKey(key, demoAccount, accountKey);
     const [page, setPage] = useState<Page>("overview"), [hindi, setHindi] = useState(false), [menu, setMenu] = useState(false), [mode, setMode] = useState<Mode>("demo"), [farm, setFarm] = useState<Farm>(defaultFarm), [draft, setDraft] = useState<Farm>(defaultFarm), [analysis, setAnalysis] = useState<Analysis | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState(""), [toast, setToast] = useState(""), [drawing, setDrawing] = useState(false), [detail, setDetail] = useState<RankedCrop | null>(null), [soilModal, setSoilModal] = useState(false), [testDraft, setTestDraft] = useState<Record<string, string>>({}), [confirmed, setConfirmed] = useState(false), [soilError, setSoilError] = useState(""), [selected, setSelected] = useState(["chickpea", "wheat", "maize"]), [cropFilter, setCropFilter] = useState("season"), [eto, setEto] = useState(4), [effectiveRain, setEffectiveRain] = useState(5), [stage, setStage] = useState(2), [efficiency, setEfficiency] = useState(0.75), [irrigationCrop, setIrrigationCrop] = useState("chickpea");
     const [moreTools, setMoreTools] = useState(false), [locationChoice, setLocationChoice] = useState<FieldLocation | null>(null), [placeQuery, setPlaceQuery] = useState(""), [nearOnly, setNearOnly] = useState(true), [places, setPlaces] = useState<PlaceResult[]>([]), [searchBusy, setSearchBusy] = useState(false), [searchError, setSearchError] = useState("");
+    const [assistantMapOptions, setAssistantMapOptions] = useState(false);
     const seq = useRef(0), fileInput = useRef<HTMLInputElement>(null);
     const farmRef = useRef(farm), selectionRef = useRef<FieldLocation | null>(null), manualChoice = useRef(false), locationGeneration = useRef(0), searchGeneration = useRef(0);
     farmRef.current = farm;
     const location = useFarmLocation(fix => {
         if (!manualChoice.current)
             void applyCurrentLocation(fix);
-    });
+    }, !demoAccount);
     const t = (en: string | null | undefined, hi?: string) => translate(en, hindi, hi);
     useEffect(() => {
-        let f = defaultFarm;
+        let f = demoAccount ? { ...defaultFarm, name: "Demo farm" } : defaultFarm;
         try {
-            const saved = localStorage.getItem("aashirwad-farm-v1");
+            const saved = localStorage.getItem(storageKey("aashirwad-farm-v1"));
             if (saved) {
                 const parsed = farmSchema.safeParse(JSON.parse(saved));
                 if (parsed.success)
                     f = parsed.data;
             }
-            const field = parseFieldLocation(localStorage.getItem("aashirwad-location-v1"));
+            const field = parseFieldLocation(localStorage.getItem(storageKey("aashirwad-location-v1")));
             if (field) {
                 selectionRef.current = field;
                 setLocationChoice(field);
@@ -179,7 +185,7 @@ export default function Dashboard() {
             setDraft(parsed.data);
             setMode(m);
             try {
-                localStorage.setItem("aashirwad-farm-v1", JSON.stringify(parsed.data));
+                localStorage.setItem(storageKey("aashirwad-farm-v1"), JSON.stringify(parsed.data));
             }
             catch { }
             setToast(m === "demo" ? "Sample farm analysis updated" : "Farm analysis updated · check source availability");
@@ -210,7 +216,7 @@ export default function Dashboard() {
         setLocationChoice(field);
         if (persist)
             try {
-                localStorage.setItem("aashirwad-location-v1", JSON.stringify(field));
+                localStorage.setItem(storageKey("aashirwad-location-v1"), JSON.stringify(field));
             }
             catch { }
     }
@@ -237,7 +243,7 @@ export default function Dashboard() {
         const next = farmAtLocation(farmRef.current, field);
         if (farmRef.current.soilTest && !next.soilTest)
             try {
-                localStorage.setItem("aashirwad-previous-farm-v1", JSON.stringify(farmRef.current));
+                localStorage.setItem(storageKey("aashirwad-previous-farm-v1"), JSON.stringify(farmRef.current));
             }
             catch { }
         setDraft(next);
@@ -264,9 +270,9 @@ export default function Dashboard() {
         setDraft(d => farmAtLocation(d, field));
         setSearchError("");
     }
-    async function searchPlaces(event: React.FormEvent) {
-        event.preventDefault();
-        const query = placeQuery.trim();
+    async function searchPlaces(event?: React.FormEvent, requestedQuery?: string) {
+        event?.preventDefault();
+        const query = (requestedQuery ?? placeQuery).trim();
         if (query.length < 2) {
             setSearchError(t("Enter a village or town name.", "गाँव या शहर का नाम लिखें।"));
             return;
@@ -306,51 +312,49 @@ export default function Dashboard() {
     async function submitSelectedFarm() {
         if (drawing) {
             setError(t("Finish the field boundary first.", "पहले खेत की सीमा पूरी करें।"));
-            return;
+            return false;
         }
         if (!selectionRef.current) {
             setError(t("Use current location, search a village, or tap the map to choose your field.", "वर्तमान जगह लें, गाँव खोजें या नक्शे पर खेत चुनें।"));
-            return;
+            return false;
         }
         const field = { ...selectionRef.current, latitude: draft.latitude, longitude: draft.longitude, label: draft.location };
         if (farmRef.current.soilTest && !draft.soilTest)
             try {
-                localStorage.setItem("aashirwad-previous-farm-v1", JSON.stringify(farmRef.current));
+                localStorage.setItem(storageKey("aashirwad-previous-farm-v1"), JSON.stringify(farmRef.current));
             }
             catch { }
         rememberLocation(field, true);
-        if (await run(draft, "live"))
-            go("crops");
+        if (await run(draft, "live")) { go("crops"); return true; }
+        return false;
     }
     function openSoil() {
         setSoilError("");
         setConfirmed(false);
         const x: Record<string, string> = { date: new Date().toISOString().slice(0, 10), lab: "" };
-        if (farm.soilTest)
-            Object.entries(farm.soilTest).forEach(([k, v]) => {
+        const activeFarm = page === "farm" ? draft : farm;
+        if (activeFarm.soilTest)
+            Object.entries(activeFarm.soilTest).forEach(([k, v]) => {
                 if (k !== "confirmed")
                     x[k] = String(v);
             });
         setTestDraft(x);
         setSoilModal(true);
     }
-    async function saveSoil() {
+    function soilCandidate(approved = false): SoilTest {
+        const raw: Record<string, unknown> = { date: testDraft.date, lab: testDraft.lab, confirmed: approved || confirmed };
+        for (const k of ["ph", "nitrogen", "phosphorus", "potassium", "ec", "organicCarbon", "zinc", "iron"])
+            if (testDraft[k]?.trim()) raw[k] = Number(testDraft[k]);
+        if (!["ph", "nitrogen", "phosphorus", "potassium", "ec", "organicCarbon", "zinc", "iron"].some(k => raw[k] !== undefined)) throw new Error("Enter at least one laboratory measurement.");
+        if (raw.date as string > new Date().toISOString().slice(0, 10)) throw new Error("The sample date cannot be in the future.");
+        return soilTestSchema.parse(raw);
+    }
+    async function saveSoil(assistantConfirmed = false) {
         try {
-            const raw: Record<string, unknown> = { date: testDraft.date, lab: testDraft.lab, confirmed };
-            for (const k of ["ph", "nitrogen", "phosphorus", "potassium", "ec", "organicCarbon", "zinc", "iron"])
-                if (testDraft[k]?.trim())
-                    raw[k] = Number(testDraft[k]);
-            if (!["ph", "nitrogen", "phosphorus", "potassium", "ec", "organicCarbon", "zinc", "iron"].some(k => raw[k] !== undefined))
-                throw new Error("Enter at least one laboratory measurement.");
-            if (raw.date as string > new Date().toISOString().slice(0, 10))
-                throw new Error("The sample date cannot be in the future.");
-            const test = soilTestSchema.parse(raw);
+            const test = soilCandidate(assistantConfirmed);
             setSoilModal(false);
-            await run({ ...(page === "farm" ? draft : farm), soilTest: test }, mode);
-        }
-        catch (e) {
-            setSoilError(errorMessage(e, "Check the soil-test values."));
-        }
+            return await run({ ...(page === "farm" ? draft : farm), soilTest: test }, mode);
+        } catch (e) { setSoilError(errorMessage(e, "Check the soil-test values.")); return false; }
     }
     async function importSoil(file: File) {
         try {
@@ -371,6 +375,77 @@ export default function Dashboard() {
             setSoilError(errorMessage(e, "The report could not be read."));
         }
     }
+    function assistantSoilValue(action: Extract<AssistantAction, { type: "soil_fill" }>) {
+        if (action.field === "lab") return action.value;
+        if (action.field === "date") {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(action.value) || action.value > new Date().toISOString().slice(0, 10) || !Number.isFinite(+new Date(action.value))) throw new Error(t("Enter a valid past sampling date"));
+            return action.value;
+        }
+        const value = Number(action.value);
+        if (!action.value.trim() || !Number.isFinite(value)) throw new Error(t("Enter a valid number."));
+        const result = soilTestSchema.safeParse({ date: new Date().toISOString().slice(0, 10), lab: "validation", confirmed: true, [action.field]: value });
+        if (!result.success) throw new Error(t(validationMessage(result.error.issues)));
+        return String(value);
+    }
+    function previewAssistant(action: AssistantAction): string {
+        const say = (en: string, hi: string) => hindi ? hi : en;
+        if (action.type === "set_farm") {
+            const base = page === "farm" ? draft : farm, patch = farmPatch(action), result = farmSchema.safeParse({ ...base, ...patch });
+            if (!result.success) throw new Error(t(validationMessage(result.error.issues)));
+            const labels: Record<string, string> = { season: "Growing season", irrigation: "Water availability", area: "Field size", areaUnit: "Unit", radiusKm: "Study radius", existingCrop: "Existing crop", name: "Farm name", irrigationSource: "Irrigation source" };
+            const value = (f: Farm) => action.field === "area" || action.field === "areaUnit" ? `${f.area} ${t(f.areaUnit)}` : action.field === "radiusKm" ? `${f.radiusKm} km` : action.field === "existingCrop" ? t(crops.find(c => c.id === f.existingCrop)?.name ?? f.existingCrop) : t(String(f[action.field]));
+            return `${t(labels[action.field])}: ${value(base)} → ${value(result.data)}.\n${say("Field", "खेत")}: ${t(base.location)}`;
+        }
+        if (action.type === "select_place") {
+            const place = places[action.index - 1]; if (!place) throw new Error(t("That search result is no longer available. Search again."));
+            return say(`Select result ${action.index}: ${place.name}.\n${place.address}`, `परिणाम ${action.index} चुनें: ${place.name}।\n${place.address}`);
+        }
+        if (action.type === "soil_fill") { assistantSoilValue(action); return ""; }
+        if (action.type === "soil_save") {
+            if (!soilModal) throw new Error(t("Open the soil-test form and enter your laboratory results first."));
+            let test: SoilTest; try { test = soilCandidate(true); } catch (e) { throw new Error(t(errorMessage(e, "Check the soil-test values."))); }
+            const labels: Record<string, string> = { ph: "pH (0–14)", nitrogen: "Available N (kg/ha)", phosphorus: "Available P (kg/ha, elemental)", potassium: "Available K (kg/ha, elemental)", ec: "EC (dS/m)", organicCarbon: "Organic carbon (%)", zinc: "Zinc (mg/kg)", iron: "Iron (mg/kg)", lab: "Laboratory name", date: "Sampling date" };
+            return Object.entries(test).filter(([key]) => key !== "confirmed").map(([key, value]) => `${t(labels[key])}: ${value}`).join("\n");
+        }
+        if (action.type === "apply_field") {
+            if (drawing) throw new Error(t("Finish the field boundary first."));
+            if (!selectionRef.current) throw new Error(t("Use current location, search a village, or tap the map to choose your field."));
+            const result = farmSchema.safeParse(draft); if (!result.success) throw new Error(t(validationMessage(result.error.issues)));
+            return say(`Apply ${draft.location}, ${draft.area} ${t(draft.areaUnit)}, ${t(draft.season)}, ${t(draft.irrigation)}. This will request the available real data.`, `${draft.location}, ${draft.area} ${t(draft.areaUnit)}, ${t(draft.season)}, ${t(draft.irrigation)} लागू करें। इससे उपलब्ध वास्तविक डेटा माँगा जाएगा।`);
+        }
+        if (action.type === "boundary" && action.operation === "clear") return t("Remove the drawn boundary from the field form? Saved field analysis stays unchanged until you apply the field.");
+        return "";
+    }
+    async function executeAssistant(action: AssistantAction): Promise<string> {
+        if (busy) throw new Error(t("Farm data is updating. Please wait before sending another command."));
+        const say = (en: string, hi: string) => hindi ? hi : en;
+        previewAssistant(action);
+        switch (action.type) {
+            case "read": return "";
+            case "navigate": setDetail(null); setSoilModal(false); go(action.page); return say(`Opened ${t(action.page === "sources" ? "Data & sources" : nav.find(n => n.id === action.page)?.label ?? "Home")}.`, `${t(action.page === "sources" ? "Data & sources" : nav.find(n => n.id === action.page)?.label ?? "Home")} खोल दिया है।`);
+            case "language": setHindi(action.language === "hi"); try { localStorage.setItem("aashirwad-language", action.language); } catch { } return "";
+            case "map": setDetail(null); setSoilModal(false); setMapPreference(action.layer); if (page !== "farm" && page !== "overview") go("farm"); return say(`${t(action.layer === "satellite" ? "Satellite" : action.layer === "terrain" ? "Terrain" : "Streets")} view selected.`, `${t(action.layer === "satellite" ? "Satellite" : action.layer === "terrain" ? "Terrain" : "Streets")} वाला नक्शा चुन लिया है।`);
+            case "location": go("farm"); useCurrentLocation(); return t("Current location requested. Follow your browser's permission prompt; the page will show whether a location was found.");
+            case "search": go("farm"); setPlaceQuery(action.query); await searchPlaces(undefined, action.query); return t("Search finished. Review the matching places on My field, or tap the map if no match is available.");
+            case "select_place": { const place = places[action.index - 1]; choosePoint(place.latitude, place.longitude, "search", place.name); setPlaces([]); setPlaceQuery(place.name); go("farm"); return say(`Selected ${place.name} on the map. Apply the field when its settings are correct.`, `${place.name} नक्शे पर चुन लिया है। जानकारी सही हो तो खेत लागू करें।`); }
+            case "set_farm": { const next = { ...(page === "farm" ? draft : farm), ...farmPatch(action) }; if (!await run(next, mode)) throw new Error(t("The farm update could not be completed. Review the page message and try again.")); return t("Your farm settings and available analysis have been updated."); }
+            case "mode": if (action.mode === "live" && !selectionRef.current) { go("farm"); return t("Choose your field first, then ask for real data."); } if (!await run(farm, action.mode)) throw new Error(t("The data could not be refreshed. Please try again.")); return t(action.mode === "demo" ? "Example data loaded. These are not measurements of your field." : "Available real data loaded. Missing sources remain empty.");
+            case "refresh": if (!await run(farm, mode)) throw new Error(t("The data could not be refreshed. Please try again.")); return t("Available data refreshed. Check source coverage before using the results.");
+            case "crop": { const crop = ranked.find(c => c.id === action.cropId); if (!crop) throw new Error(t("The crop data has not loaded yet. Please try again.")); setSoilModal(false); go("crops"); setDetail(crop); return say(`${t(crop.name)}: ${crop.days.join("–")} days, ${t(crop.water)} water demand. ${crop.score === null ? "More evidence is needed for a suitability score." : `Relative suitability ${crop.score}/100, not a success probability.`}`, `${t(crop.name)}: ${crop.days.join("–")} दिन, पानी की ${t(crop.water)} जरूरत। ${crop.score === null ? "उपयुक्तता के अंक के लिए और डेटा चाहिए।" : `तुलनात्मक उपयुक्तता ${crop.score}/100 है; यह सफलता की संभावना नहीं।`}`); }
+            case "compare": setDetail(null); setSoilModal(false); setSelected([...new Set(action.cropIds)]); go("compare"); return say(`Comparing ${action.cropIds.map(id => t(crops.find(c => c.id === id)?.name)).join(", ")}.`, `${action.cropIds.map(id => t(crops.find(c => c.id === id)?.name)).join(", ")} की तुलना खोल दी है।`);
+            case "filter": setDetail(null); setSoilModal(false); setCropFilter(action.filter); go("crops"); return t(action.filter === "all" ? "Showing all nine crops, including crops outside your selected season." : action.filter === "water" ? "Showing low-water crop options for your selected season." : "Showing crop options for your selected season.");
+            case "soil_open": setDetail(null); openSoil(); return t("The soil-test form is open. Enter only results from your laboratory report.");
+            case "soil_fill": { const value = assistantSoilValue(action); if (!soilModal) openSoil(); setTestDraft(d => ({ ...d, [action.field]: value })); setConfirmed(false); return t("Added to the soil-test form as an unsaved value. Review the units, laboratory and date before asking me to save."); }
+            case "soil_save": if (!await saveSoil(true)) throw new Error(t("The soil test could not be saved. Review the form and try again.")); return t("Your reviewed laboratory results have been saved and the analysis updated.");
+            case "boundary": go("farm"); setAssistantMapOptions(true); if (action.operation === "draw") { if (!drawing) setDraft(d => ({ ...d, boundary: [] })); setDrawing(true); return t("Boundary drawing is on. Tap at least three corners on the map, then say finish boundary."); } if (action.operation === "clear") { setDrawing(false); setDraft(d => ({ ...d, boundary: [] })); return t("The boundary was removed from the field form. Apply the field to save that change."); } if (draft.boundary.length < 3) throw new Error(t("Tap at least three corners to finish your field boundary.")); setDrawing(false); return t("Boundary drawing finished. Apply the field to save it.");
+            case "irrigation": { const values = { crop: irrigationCrop, stage, eto, rain: effectiveRain, efficiency }; if (action.field === "crop") values.crop = action.value; else { let value = Number(action.value); if (action.field === "efficiency" && value > 1) value /= 100; values[action.field] = value; } irrigationEstimate(values.crop, values.stage, values.eto, values.rain, hectares(farm), values.efficiency); setIrrigationCrop(values.crop); setStage(values.stage); setEto(values.eto); setEffectiveRain(values.rain); setEfficiency(values.efficiency); go("advisory"); return t("Your irrigation scenario input has been updated. This is an illustration, not a measured field requirement."); }
+            case "download": if (action.kind === "source") { const link = document.createElement("a"); link.href = "/Aashirwad_Source.zip"; link.download = "Aashirwad_Source.zip"; link.click(); } else { if (!analysis) throw new Error(t("The data has not loaded yet.")); downloadJSON(analysis, "Aashirwad_Farm_Report.json"); } return t("Download requested. Check your browser's downloads list.");
+            case "apply_field": if (!await submitSelectedFarm()) throw new Error(t("The field could not be applied. Review the page message and try again.")); return t("Your field was applied and the available crop data is open. Missing measurements remain empty.");
+            case "close_dialog": setDetail(null); setSoilModal(false); return t("The details form is closed.");
+            case "stop_speech": return "";
+        }
+    }
+
     const a = analysis, w = a?.weather, top = a?.crops[0];
     const selectedMapFarm = farm;
     const dirty = JSON.stringify(draft) !== JSON.stringify(farm);
@@ -385,6 +460,8 @@ export default function Dashboard() {
         }
     }, [irrigationCrop, stage, eto, effectiveRain, farm, efficiency]);
     const comparison = useMemo(() => a ? (["Rain-fed", "Limited", "Reliable"] as const).map(irrigation => ({ irrigation, crops: recommend({ ...farm, irrigation }, a.soil, a.weather) })) : [], [a, farm]);
+    const assistantContext = buildAssistantContext(a, farm, page, !!locationChoice, dirty, places.map(p => p.name.slice(0, 180)), irrigation ? { netMm: irrigation.netMm, grossMm: irrigation.grossMm, volumeM3: irrigation.volumeM3 } : null);
+    const assistantRevision = JSON.stringify({ farm, draft, mode, page, testDraft, places, analyzedAt: a?.analyzedAt });
     return <LocaleProvider hindi={hindi}><div className="app-shell">
   {menu && <button className="sidebar-scrim" aria-label={t("Close navigation")} onClick={() => setMenu(false)}/>}
   <aside className={`sidebar ${menu ? "open" : ""}`}>
@@ -394,9 +471,9 @@ export default function Dashboard() {
    <nav aria-label={t("Main navigation")}>{nav.filter(n => ["overview", "farm", "crops", "advisory"].includes(n.id)).map(({ id, label, hi, icon: Icon }) => <button key={id} className={`nav-item ${page === id ? "active" : ""}`} onClick={() => go(id)}><Icon size={22} strokeWidth={1.8}/><span>{t(label, hi)}</span>{page === id && <i />}</button>)}
    <button className="nav-item more-tools-toggle" onClick={() => setMoreTools(!moreTools)} aria-expanded={moreTools}><Layers size={21}/><span>{t("More tools", "और सुविधाएँ")}</span><ChevronDown size={15}/></button>
    {moreTools && <div className="more-tools-nav">{nav.filter(n => ["soil", "weather", "water", "compare"].includes(n.id)).map(({ id, label, hi, icon: Icon }) => <button key={id} className={`nav-item ${page === id ? "active" : ""}`} onClick={() => go(id)}><Icon size={20}/><span>{t(label, hi)}</span></button>)}</div>}</nav>
-   <div className="sidebar-bottom"><button className={`nav-item ${page === "sources" ? "active" : ""}`} onClick={() => go("sources")}><Database size={18}/>{t("Data & sources", "डेटा और स्रोत")}<ArrowUpRight size={14}/></button><div className="sidebar-tip"><span><Leaf size={18}/>{t("Rooted in better decisions", "बेहतर निर्णय की शुरुआत")}</span><p>{t("Every insight has a source. Every field has a story.", "हर जानकारी का स्रोत। हर खेत की अपनी कहानी।")}</p><button onClick={() => go("sources")}>{t("How it works", "यह कैसे काम करता है")}<ArrowRight size={13}/></button></div><div className="profile"><span className="farmer-profile-icon"><Sprout size={24}/></span><span><strong>{t("Made for farmers", "किसानों के लिए")}</strong><small>{t("Simple steps. Clear information.", "आसान कदम। साफ जानकारी।")}</small></span></div></div>
+   <div className="sidebar-bottom"><button className={`nav-item ${page === "sources" ? "active" : ""}`} onClick={() => go("sources")}><Database size={18}/>{t("Data & sources", "डेटा और स्रोत")}<ArrowUpRight size={14}/></button><div className="sidebar-tip"><span><Leaf size={18}/>{t("Rooted in better decisions", "बेहतर निर्णय की शुरुआत")}</span><p>{t("Every insight has a source. Every field has a story.", "हर जानकारी का स्रोत। हर खेत की अपनी कहानी।")}</p><button onClick={() => go("sources")}>{t("How it works", "यह कैसे काम करता है")}<ArrowRight size={13}/></button></div><a href="/login" className="profile profile-welcome" aria-label={t("Welcome and sign-in page")}><span className="farmer-profile-icon"><Sprout size={24}/></span><span><strong>{t(accountName)}</strong><small>{t(demoAccount ? "Demo account · sample data" : "Your farmer account")}</small></span></a></div>
   </aside>
-  <div className="main-shell"><header className="topbar"><div className="breadcrumb"><button className="mobile-menu icon-button" onClick={() => setMenu(true)} aria-label={t("Open navigation")}><Menu size={21}/></button><span>{t("Workspace", "कार्यक्षेत्र")}</span><ChevronRight size={13}/><strong>{t(page === "sources" ? t("Data & sources", "डेटा और स्रोत") : t(nav.find(n => n.id === page)?.label ?? "", nav.find(n => n.id === page)?.hi ?? ""))}</strong></div><div className="top-actions"><div className="mode-switch" aria-label={t("Data mode")}><button className={mode === "demo" ? "selected" : ""} onClick={() => changeMode("demo")} disabled={busy}><span className="status-dot amber"/>{t("Example", "उदाहरण")}</button><button className={mode === "live" ? "selected" : ""} onClick={() => changeMode("live")} disabled={busy}><span className="status-dot"/>{t("Real data", "वास्तविक डेटा")}</button></div><button className="language-button" aria-label={hindi ? "Switch to English" : "Switch to Hindi"} onClick={() => setHindi(v => { localStorage.setItem("aashirwad-language", v ? "en" : "hi"); return !v; })}><Globe2 size={15}/>{t(hindi ? "English" : "EN / हिन्दी")}</button></div></header>
+  <div className="main-shell"><header className="topbar"><div className="breadcrumb"><button className="mobile-menu icon-button" onClick={() => setMenu(true)} aria-label={t("Open navigation")}><Menu size={21}/></button><span>{t("Workspace", "कार्यक्षेत्र")}</span><ChevronRight size={13}/><strong>{t(page === "sources" ? t("Data & sources", "डेटा और स्रोत") : t(nav.find(n => n.id === page)?.label ?? "", nav.find(n => n.id === page)?.hi ?? ""))}</strong></div><div className="top-actions"><a className="account-exit" href={demoAccount ? "/login" : signOutPath} target={demoAccount ? "_self" : "_top"} onClick={() => { try { sessionStorage.removeItem(ENTRY_KEY); } catch { } }}><LogOut size={14}/>{t(demoAccount ? "Exit demo" : "Sign out")}</a><div className="mode-switch" aria-label={t("Data mode")}><button className={mode === "demo" ? "selected" : ""} onClick={() => changeMode("demo")} disabled={busy}><span className="status-dot amber"/>{t("Example", "उदाहरण")}</button><button className={mode === "live" ? "selected" : ""} onClick={() => changeMode("live")} disabled={busy}><span className="status-dot"/>{t("Real data", "वास्तविक डेटा")}</button></div><button className="language-button" aria-label={hindi ? "Switch to English" : "Switch to Hindi"} onClick={() => setHindi(v => { localStorage.setItem("aashirwad-language", v ? "en" : "hi"); return !v; })}><Globe2 size={15}/>{t(hindi ? "English" : "EN / हिन्दी")}</button></div></header>
   <main className="content" id="main-content">
    <div className="page-heading"><div><div className="eyebrow"><span />{t("A LITTLE INSIGHT. A BETTER HARVEST.", "सही जानकारी। बेहतर फसल।")}</div><h1>{t(titles[page][hindi ? 1 : 0])}</h1><p>{t(hindi ? ({ overview: "आपकी जमीन, पानी और अगली फसल के लिए उपयोगी जानकारी।", farm: "नक्शे पर खेत चुनें और अपनी जानकारी भरें।", soil: "अपने खेत के माप और मिट्टी की जानकारी जोड़ें।", weather: "यह पुराने मौसम का विश्लेषण है, भविष्य का पूर्वानुमान नहीं।", water: "सतही नमी और पास के भूजल मापन को समझें।", crops: "मिट्टी, मौसम और उपलब्ध पानी के आधार पर प्रारंभिक सुझाव।", advisory: "पानी की जरूरत का अनुमान और खेती के अगले कदम।", compare: "फसलों की जरूरत और पानी के विकल्प की तुलना करें।", sources: "जानें हर मान कहाँ से आया और कौन सा डेटा बाकी है।" })[page] : descriptions[page])}</p></div><div className="heading-actions">{page === "sources" && <button className="button secondary report-button" disabled={!a || busy} onClick={() => { downloadJSON(a, "Aashirwad_Farm_Report.json"); setToast("Farm report downloaded with data sources and limitations."); }}><Download size={16}/>{t("Export report", "रिपोर्ट डाउनलोड")}</button>}<button className="button primary" disabled={busy} onClick={() => page === "farm" ? submitSelectedFarm() : go("crops")}>{busy ? <Loader2 className="spin" size={16}/> : <ScanLine size={16}/>}{t(busy ? t("Analyzing…", "विश्लेषण…") : page === "farm" ? t("Use this field", "यह खेत चुनें") : t("See crop options", "फसल विकल्प देखें"))}</button></div></div>
    {(page === "overview" || page === "farm") && <LocationPanel status={location.status} position={location.position} selected={locationChoice} onCurrent={useCurrentLocation} onMap={chooseNearby} hindi={hindi}/>}
@@ -422,7 +499,7 @@ export default function Dashboard() {
       {!!places.length && <div className="place-results" aria-label={t("Place search results")}>{places.map(place => <button type="button" key={place.id} onClick={() => { choosePoint(place.latitude, place.longitude, "search", place.name); setPlaces([]); setPlaceQuery(place.name); }}><MapPin size={22}/><span><strong>{t(place.name)}</strong><small>{t(place.address)}</small></span><span className="place-distance">{t(place.distanceKm !== null ? `${fmt(place.distanceKm, 1)} km` : "")}<ChevronRight size={18}/></span></button>)}<p>{t("\u00A9 OpenStreetMap contributors")}</p></div>}
       <div className="easy-map"><FarmMap farm={draft} draw={drawing} currentPosition={location.position} overview={!locationChoice && !location.position} onPick={(lat, lng) => drawing ? setDraft(d => ({ ...d, boundary: [...d.boundary, [lat, lng]] })) : choosePoint(lat, lng)}/><div className="map-tap-hint"><MapPin size={17}/>{t(drawing ? t("Tap each corner of your field", "खेत के हर कोने पर टैप करें") : t("Tap your field to put the green pin there", "अपने खेत पर टैप करके हरा निशान लगाएँ"))}</div></div>
       <div className="field-selection-summary"><span className="field-selected-icon"><MapPin size={24}/></span><div><strong>{t(locationChoice ? draft.location : t("No field selected yet", "अभी खेत नहीं चुना गया है"))}</strong><p>{t(locationChoice ? (nearbyDistance(location.position, draft) !== null ? `${fmt(nearbyDistance(location.position, draft), 1)} ${t("km from your current location", "किमी आपकी वर्तमान जगह से")}` : t("Selected on the map", "नक्शे पर चुना गया")) : t("Use your location or tap the map above.", "अपनी जगह लें या ऊपर नक्शे पर टैप करें।"))}</p></div>{locationChoice && <CheckCircle2 size={22}/>}</div>
-      <details className="advanced-location"><summary><Settings2 size={17}/>{t("More map options", "नक्शे के और विकल्प")}<ChevronDown size={16}/></summary><div>
+      <details className="advanced-location" open={assistantMapOptions} onToggle={event => setAssistantMapOptions(event.currentTarget.open)}><summary><Settings2 size={17}/>{t("More map options", "नक्शे के और विकल्प")}<ChevronDown size={16}/></summary><div>
         <div className="map-tools"><button type="button" className={`button ${drawing ? "primary" : "secondary"} small-button`} onClick={() => {
                     if (drawing && draft.boundary.length < 3) {
                         setError("Tap at least three corners to finish your field boundary.");
@@ -500,5 +577,6 @@ export default function Dashboard() {
                     void importSoil(e.target.files[0]);
                 e.target.value = "";
             }}/><button className="text-button tiny" onClick={() => downloadJSON({ date: new Date().toISOString().slice(0, 10), lab: t("Enter your laboratory", "प्रयोगशाला का नाम दर्ज करें"), ph: 7.1, nitrogen: 200, phosphorus: 20, potassium: 180, ec: 0.3, organicCarbon: 0.6 }, "Soil_Test_Example_Template.json")}>{t("Download example template")}<Download size={12}/></button><div className="form-grid"><label>{t("Laboratory name")}<input required value={testDraft.lab ?? ""} onChange={e => setTestDraft(d => ({ ...d, lab: e.target.value }))}/></label><label>{t("Sampling date")}<input type="date" required max={new Date().toISOString().slice(0, 10)} value={testDraft.date ?? ""} onChange={e => setTestDraft(d => ({ ...d, date: e.target.value }))}/></label></div><div className="form-grid soil-fields">{[{ k: "ph", label: "pH (0–14)", max: 14 }, { k: "ec", label: "EC (dS/m)", max: 100 }, { k: "nitrogen", label: "Available N (kg/ha)", max: 5000 }, { k: "phosphorus", label: "Available P (kg/ha, elemental)", max: 5000 }, { k: "potassium", label: "Available K (kg/ha, elemental)", max: 5000 }, { k: "organicCarbon", label: "Organic carbon (%)", max: 100 }, { k: "zinc", label: "Zinc (mg/kg)", max: 10000 }, { k: "iron", label: "Iron (mg/kg)", max: 10000 }].map(x => <label key={x.k}>{t(x.label)}<input type="number" min="0" max={x.max} step="0.01" placeholder={t("Not tested")} value={testDraft[x.k] ?? ""} onChange={e => setTestDraft(d => ({ ...d, [x.k]: e.target.value }))}/></label>)}</div><Notice>{t("Leave untested values blank. Do not enter P\u2082O\u2085 or K\u2082O values as elemental P or K. Imported fields are not automatically verified by this app.")}</Notice><label className="confirm-check"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}/><span>{t("I checked these values, units and sample date against my laboratory report.")}</span></label>{soilError && <div className="error-banner" role="alert">{t(soilError)}</div>}<div className="modal-actions"><button className="button secondary" onClick={() => setSoilModal(false)}>{t("Cancel")}</button><button className="button primary" disabled={!confirmed || busy} onClick={() => void saveSoil()}><Save size={15}/>{t("Confirm & save results")}</button></div></div></section></div>}
+ <VoiceAssistant context={assistantContext} revision={assistantRevision} disabled={busy || !analysis} preview={previewAssistant} execute={executeAssistant}/>
  </div></LocaleProvider>;
 }

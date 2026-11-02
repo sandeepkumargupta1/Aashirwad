@@ -5,6 +5,7 @@ import { Info, Loader2, Map as MapIcon, Mountain, RotateCcw, Satellite } from "l
 import type { Farm } from "../lib/types";
 import type { LocationFix } from "../lib/location";
 import type * as Leaflet from "leaflet";
+import { MAP_VIEW_EVENT, isMapView, setMapPreference } from "../lib/map-preference";
 type Basemap = "streets" | "satellite" | "terrain";
 const basemaps = [
     { id: "streets", label: "Streets", icon: MapIcon },
@@ -36,6 +37,9 @@ export default function FarmMap({ farm, onPick, draw = false, compact = false, c
             const saved = localStorage.getItem("aashirwad-map-layer");
             if (saved === "streets" || saved === "satellite" || saved === "terrain") setBasemap(saved);
         } catch { }
+        const changed = (event: Event) => { const value = (event as CustomEvent).detail; if (isMapView(value)) setBasemap(value); };
+        window.addEventListener(MAP_VIEW_EVENT, changed);
+        return () => window.removeEventListener(MAP_VIEW_EVENT, changed);
     }, []);
     useEffect(() => {
         let cancelled = false;
@@ -124,7 +128,7 @@ export default function FarmMap({ farm, onPick, draw = false, compact = false, c
     }, [ready, farm.latitude, farm.longitude, farm.radiusKm, farm.boundary, draw, currentPosition, overview, t]);
     function changeBasemap(value: Basemap) {
         setBasemap(value);
-        try { localStorage.setItem("aashirwad-map-layer", value); } catch { }
+        setMapPreference(value);
     }
     return <div className={`map-frame map-view-${basemap}`}>
         <div className={`map-shell ${compact ? "compact" : ""} ${draw ? "drawing" : ""}`}>

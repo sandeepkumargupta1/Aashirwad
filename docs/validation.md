@@ -37,3 +37,19 @@ These are software checks, not agronomic or yield-model field validation. No rea
 ## Automatic-location update
 
 The updated interface requests device location once when opened, offers current-area and nearby-map actions, and moves coordinate entry behind More map options. New tests cover successful GPS fixes, permission denial, timeouts, unavailable/unsupported devices, outside-area fixes, saved-location validation, field-specific soil-test isolation, place parsing, bounded search, caching and throttling. Location cannot bypass browser permission; no IP-based or example location is substituted for a failed device request. Named-place service availability depends on outbound access.
+
+## Welcome, account and demo update
+
+- The welcome layout fits within the viewport; the full photographic composition is contained rather than cropped. Desktop browser QA confirms the header, complete farmer scene, Login/Create account tabs, demo entry and footer appear without document scrolling. Responsive layouts include compact portrait and short landscape rules.
+- Login and account creation use Sites-owned ChatGPT identity. A D1 farmer profile stores a display name and optional village under the server-provided user ID. The application does not store passwords. Account requests are private/no-store, authenticated, origin-checked and input-validated.
+- Try demo opens a named sample farm without an application password. Demo and account farm preferences use separate browser storage keys; different authenticated accounts also have separate keys. Demo entry does not automatically request device location.
+- The profile schema migration and defaults were checked against SQLite. Account isolation, unsigned access rejection, same-origin write checks and input limits have automated checks. End-to-end hosted ChatGPT sign-in depends on the visitor's authentication session.
+
+## Welcome motion film update
+
+- Replaced photograph opacity transitions and the synthetic rain overlay with a locally served H.264 motion film. Native media events drive playback controls, stage labels and progress. The final frame remains visible after playback.
+- The user-selected watering reference is retained. Later generation starts from the actual end of the previous shot to keep the farmer and backdrop continuous; the complete farmer, ground and mountain view are contained in the video frame.
+- Reduced-motion preference pauses autoplay and shows the film's actual ending still. Manual play and replay remain available. A loading failure holds the ending image and displays a translated retry message.
+- English/Hindi interface coverage, account isolation checks and TypeScript validation pass. AI-generated anatomy, water and growth remain illustrative rather than physically measured footage.
+
+- Browser QA: native media reports 23.75 seconds, H.264 1280 × 720 at 24 fps; replay starts at the beginning, pause freezes playback, and the ending holds. At a 1363 × 936 viewport, document dimensions are also 1363 × 936 with no page scrolling. English/Hindi switching preserves video position and translates the controls.

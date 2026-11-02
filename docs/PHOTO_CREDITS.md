@@ -92,3 +92,25 @@ The supplied files are Wikimedia Commons thumbnails of the linked originals. Ima
 - Terrain: [OpenTopoMap](https://opentopomap.org/about), using OpenStreetMap and SRTM data; map style [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). Native zoom is capped at 17; zooming closer enlarges the available map.
 
 Basemaps provide visual location context. They do not supply measured soil conditions, crop health or groundwater observations. Visible attribution changes with the selected layer. External tile service availability and publisher terms apply.
+
+## Welcome animation landscape
+
+- Asset: `public/welcome/farm-mountains.webp`, generated with the built-in image generation tool for the welcome scene; optimized to a 338 KB WebP.
+- Brief: a realistic, softly lit Indian farm landscape with textured cultivated earth in the foreground, terraced fields, atmospheric mountain layers and morning valley mist; no people or text.
+- This is a decorative generated landscape, not an image of the user's actual field. Retained as the original landscape plate. The current welcome experience uses the generated photographic story frames below.
+
+## Photographic welcome story
+
+- Assets: `public/welcome/farmer-prayer.webp`, `farmer-cup.webp`, `farmer-water.webp`, and `farmer-grown.webp`.
+- Created with the built-in image generation tool, using the same reference farmer, clothing, farm, mountain backdrop and morning light across prayer, cupped hands, seed watering and a grown crop. They are generated illustrative scenes, not photographs of a real customer or their field.
+- The user-selected watering frame is preserved. Images are resized and compressed for loading; the plant appears in the final scene.
+- These images are retained as the visual references for the motion film below. The welcome player no longer dissolves between photographs.
+
+## Welcome motion film
+
+- Asset: `public/welcome/aashirwad-welcome.mp4`; 23.75 seconds, 1280 × 720, 24 fps, H.264, approximately 7.8 MB; generated in Google Flow with Veo 3.1 Lite using the photographic references above.
+- Three connected scenes show prayer and cupped hands, bending to water the seed, and standing while a leafy plant grows. Each subsequent scene uses the actual final frame of its predecessor as its starting reference. The shots are joined directly, without photo dissolves.
+- The complete 16:9 composition, including the farmer's feet and mountain landscape, is contained within the welcome frame. The visible provider watermark is retained.
+- This is an AI-generated illustrative film, not documentary footage or a demonstration of real-time crop growth. Growth uses an artistic time lapse; small generated details can vary.
+- The site serves the MP4 locally with muted inline playback, pause and replay. Actual first and last video frames supply `video-start.webp` and `video-end.webp`; the ending holds on the grown plant. Reduced-motion preference defaults to the ending still with optional manual playback.
+- Creation used free provider credits without a paid upgrade. No video generation API or provider account is needed to play the completed film.

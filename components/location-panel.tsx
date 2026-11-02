@@ -3,7 +3,7 @@ import { translate } from '../lib/i18n';
 import { MapPin, LocateFixed, Map, Loader2, Check, Navigation, ArrowRight } from 'lucide-react';
 import type { FieldLocation, LocationFix, LocationProblem } from '../lib/location';
 export default function LocationPanel({ status, position, selected, onCurrent, onMap, hindi = false }: {
-    status: 'finding' | 'ready' | LocationProblem;
+    status: 'idle' | 'finding' | 'ready' | LocationProblem;
     position: LocationFix | null;
     selected: FieldLocation | null;
     onCurrent: () => void;

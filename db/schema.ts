@@ -1,4 +1,9 @@
-// Intentionally empty by default.
-// Add Drizzle tables here when the site actually needs a database.
-// See examples/d1/db/schema.ts for an opt-in example.
-export {};
+import { sql } from "drizzle-orm";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+export const farmerProfiles = sqliteTable("farmer_profiles", {
+    userId: text("user_id").primaryKey(),
+    displayName: text("display_name").notNull(),
+    village: text("village").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

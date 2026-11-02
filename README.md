@@ -40,7 +40,11 @@ The Python service includes reusable OpenLandMap, SoilGrids, EOS-04 and CGWB con
 - One-click current area, a nearby field map, and village/town search with explicit submission.
 - Large labeled crop/water/soil actions, a simpler four-item menu and a clearer sprout logo. Coordinates, boundaries and extra form fields are optional advanced controls.
 - Saved map-selected fields stay selected when a later GPS fix arrives. Field-specific soil tests are not reused at a different location.
+- Animated bilingual welcome/sign-in page: a farmer’s prayer, rain reaching the hands, a drop watering a seed, and a full-grown plant. Pause/replay and reduced-motion support. Existing Sites/ChatGPT sign-in protects the hosted site.
+- Refreshed responsive styling with larger controls, clearer typography, real crop photos and simple icons.
 - Overview, soil, climate, water, crops, advisory, comparison and data-source screens.
+- A free English/Hindi voice and typed assistant controls navigation, maps, farm settings, crop comparison, soil-test drafts, irrigation scenarios and downloads. It reads actual app values and requests confirmation before saving changes.
+- Optional on-device AI uses WebLLM/Qwen3 without an API key, server inference or billing setup; about 400 MB downloads once, with WebGPU and about 2 GB graphics memory required. Voice and typed commands work without loading the model. See `docs/ASSISTANT.md`.
 - English/Hindi throughout screens, forms, charts, crop explanations, source notes and messages. Scientific units, publisher names and farmer-entered names retain their original form. Language preference persists between visits.
 - Explicit demo/live separation; loading, failure and partial-data states.
 - Soil Health Card manual entry, structured JSON import, confirmation and laboratory priority. No PDF/OCR extraction is claimed.
